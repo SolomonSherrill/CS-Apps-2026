@@ -729,6 +729,7 @@
                         <th>Quantity</th>
                         <th>Notes</th>
                         <th>Link</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody id="inventory-body"></tbody>
@@ -807,8 +808,75 @@
     </div>
 </div>
 
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">EDIT PART</div>
+            <button class="modal-close" onclick="closeEditModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="field full">
+                    <label>Part Name</label>
+                    <input type="text" id="edit-name">
+                </div>
+                <div class="field">
+                    <label>Category</label>
+                    <select class="filter-select" id="edit-category" style="width:100%">
+                        <option value="">Select...</option>
+                        <option value="motor">Motor</option>
+                        <option value="servo">Servo</option>
+                        <option value="sensor">Sensor</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="hardware">Hardware</option>
+                        <option value="structural">Structural</option>
+                        <option value="3d printed">3D Printed</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Vendor</label>
+                    <select class="filter-select" id="edit-vendor" style="width:100%">
+                        <option value="">Select...</option>
+                        <option value="gobilda">goBILDA</option>
+                        <option value="rev">REV</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Quantity</label>
+                    <input type="number" id="edit-quantity" min="0">
+                </div>
+                <div class="field">
+                    <label>Min Quantity</label>
+                    <input type="number" id="edit-min-quantity" min="0">
+                </div>
+                <div class="field full">
+                    <label>Part Number</label>
+                    <input type="text" id="edit-part-number">
+                </div>
+                <div class="field full">
+                    <label>URL</label>
+                    <input type="url" id="edit-url">
+                </div>
+                <div class="field full">
+                    <label>Notes</label>
+                    <input type="text" id="edit-notes">
+                </div>
+            </div>
+        </div>
+        <div class="modal-msg" id="edit-msg"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-submit" onclick="submitEditPart()">SAVE</button>
+        </div>
+    </div>
+</div>
+
+
 <script>
-    const API = 'https://robotics-backend-ddu8.onrender.com';
+    const API = 'https://robotics-backend-ddu8.onrender.com'; // ← CHANGE THIS
     let currentUser = null;
     let allParts = [];
     let activeTab = 'login';
@@ -908,9 +976,9 @@
 
     function updateStats(parts) {
         const total = parts.length;
-        const units = parts.reduce((s, p) => s + (p[3] || 0), 0);
-        const low = parts.filter(p => p[3] <= p[4] && p[3] > 0).length;
-        const out = parts.filter(p => p[3] === 0).length;
+        const units = parts.reduce((s, p) => s + (p[4] || 0), 0);
+        const low = parts.filter(p => p[4] <= p[5] && p[4] > 0).length;
+        const out = parts.filter(p => p[4] === 0).length;
 
         document.getElementById('stat-total').textContent = total;
         document.getElementById('stat-units').textContent = units;
@@ -946,7 +1014,7 @@
         // columns: id, name, category, vendor, quantity, min_quantity, part_number, url, notes, created_at
         const tbody = document.getElementById('inventory-body');
         tbody.innerHTML = parts.map(p => {
-            const [id, name, category, vendor, quantity, min_qty, part_number, url, notes] = p;
+            const [id, name, category, vendor, quantity, min_qty, part_number, url, notes, created_at] = p;
             const qtyClass = quantity === 0 ? 'critical' : quantity <= min_qty ? 'low' : 'ok';
             const showDot = quantity <= min_qty;
             const vendorClass = vendor === 'gobilda' ? 'vendor-gobilda' : vendor === 'rev' ? 'vendor-rev' : 'vendor-other';
@@ -969,6 +1037,12 @@
                 </td>
                 <td style="font-size:13px;color:var(--muted)">${notes || '—'}</td>
                 <td>${url ? `<a class="part-link" href="${url}" target="_blank">↗ link</a>` : '—'}</td>
+                <td>
+                    <div style="display:flex;gap:6px">
+                        <button class="qty-btn" style="width:auto;padding:0 8px;height:24px;font-family:'DM Mono',monospace;font-size:10px" onclick="openEditModal(${id})">EDIT</button>
+                        <button class="qty-btn" style="width:auto;padding:0 8px;height:24px;font-family:'DM Mono',monospace;font-size:10px;color:var(--danger);border-color:var(--danger)" onclick="deletePart(${id})">DEL</button>
+                    </div>
+                </td>
             </tr>`;
         }).join('');
     }
@@ -1066,6 +1140,82 @@
             msg.textContent = 'Could not reach server';
         }
     }
+
+    // ── EDIT MODAL ──
+    let editingId = null;
+
+    function openEditModal(id) {
+        const part = allParts.find(p => p[0] === id);
+        if (!part) return;
+        const [pid, name, category, vendor, quantity, min_qty, part_number, url, notes] = part;
+        editingId = id;
+        document.getElementById('edit-name').value = name || '';
+        document.getElementById('edit-category').value = category || '';
+        document.getElementById('edit-vendor').value = vendor || '';
+        document.getElementById('edit-quantity').value = quantity ?? '';
+        document.getElementById('edit-min-quantity').value = min_qty ?? '';
+        document.getElementById('edit-part-number').value = part_number || '';
+        document.getElementById('edit-url').value = url || '';
+        document.getElementById('edit-notes').value = notes || '';
+        document.getElementById('edit-msg').textContent = '';
+        document.getElementById('edit-modal').classList.add('open');
+    }
+
+    function closeEditModal() {
+        document.getElementById('edit-modal').classList.remove('open');
+        editingId = null;
+    }
+
+    async function submitEditPart() {
+        const msg = document.getElementById('edit-msg');
+        const payload = {
+            id: editingId,
+            name: document.getElementById('edit-name').value.trim() || null,
+            category: document.getElementById('edit-category').value || null,
+            vendor: document.getElementById('edit-vendor').value || null,
+            quantity: document.getElementById('edit-quantity').value !== '' ? parseInt(document.getElementById('edit-quantity').value) : null,
+            min_quantity: document.getElementById('edit-min-quantity').value !== '' ? parseInt(document.getElementById('edit-min-quantity').value) : null,
+            part_number: document.getElementById('edit-part-number').value.trim() || null,
+            url: document.getElementById('edit-url').value.trim() || null,
+            notes: document.getElementById('edit-notes').value.trim() || null,
+        };
+        try {
+            const res = await fetch(API + '/inventory/edit', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success === false) {
+                msg.className = 'modal-msg error';
+                msg.textContent = data.error || 'Failed to save';
+            } else {
+                msg.className = 'modal-msg success';
+                msg.textContent = 'Saved!';
+                setTimeout(() => { closeEditModal(); loadInventory(); }, 600);
+            }
+        } catch (e) {
+            msg.className = 'modal-msg error';
+            msg.textContent = 'Could not reach server';
+        }
+    }
+
+    // ── DELETE ──
+    async function deletePart(id) {
+        if (!confirm('Delete this part?')) return;
+        try {
+            const res = await fetch(API + `/inventory/delete?id=${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                allParts = allParts.filter(p => p[0] !== id);
+                filterTable();
+                updateStats(allParts);
+            }
+        } catch (e) {
+            console.error('Failed to delete', e);
+        }
+    }
+
 </script>
 </body>
 </html>

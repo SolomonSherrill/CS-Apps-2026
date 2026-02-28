@@ -31,6 +31,17 @@ class UpdateRequest(BaseModel):
     id: int
     quantity: int
 
+class EditPartRequest(BaseModel):
+    id: int
+    name: Optional[str] = None
+    category: Optional[str] = None
+    vendor: Optional[str] = None
+    quantity: Optional[int] = None
+    min_quantity: Optional[int] = None
+    part_number: Optional[str] = None
+    url: Optional[str] = None
+    notes: Optional[str] = None
+
 auth = user_auth()
 inv = inventory()
 
@@ -57,3 +68,11 @@ def add_part(request: AddPartRequest):
 @app.post("/inventory/update")
 def update_inventory(request: UpdateRequest):
     return inv.update_inventory(request.id, request.quantity)
+
+@app.post("/inventory/edit")
+def edit_part(request: EditPartRequest):
+    return inv.edit_part(request.id, request.name, request.category, request.vendor, request.quantity, request.min_quantity, request.part_number, request.url, request.notes)
+
+@app.delete("/inventory/delete")
+def delete_part(id: int):
+    return inv.delete_part(id)
