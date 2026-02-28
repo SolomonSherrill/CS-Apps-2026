@@ -15,7 +15,7 @@ from slowapi.errors import RateLimitExceeded
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://inventory-manager-frontend-nine.vercel.app"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -74,7 +74,10 @@ async def register(request: Request, body: AuthRequest):
 @app.post("/login")
 @limiter.limit("1/minute")
 async def login(request: Request, body: AuthRequest):
-    return auth.authenticate_user(body.username, body.password)
+    result = auth.authenticate_user(body.username, body.password)
+    if result.get("success"):
+        result["token"] = create_token(body.username)
+    return result
 
 @app.get("/inventory/getall")
 def get_inventory():
