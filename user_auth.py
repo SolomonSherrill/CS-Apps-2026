@@ -11,6 +11,13 @@ class user_auth:
             raise ValueError("SUPABASE_URL not found in environment variables.")
         self.conn = psycopg2.connect(db_url)
         self.cur = self.conn.cursor() 
+    def get_cursor(self):
+        try:
+            self.conn.isolation_level
+        except:
+            self.conn = psycopg2.connect(os.getenv("SUPABASE_URL"))
+        self.cur = self.conn.cursor()
+        return self.cur
     def hash_password(self, password):
         ph = PasswordHasher()
         return ph.hash(password)
@@ -19,15 +26,15 @@ class user_auth:
             return {"success": False, "error": "Invalid invite code."}
         hashed_password = self.hash_password(password)
         try:
-            self.cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
+            self.get_cursor().execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
             self.conn.commit()
             return {"success": True}
         except psycopg2.errors.UniqueViolation:
             self.conn.rollback()
             return {"success": False, "error": "Username already exists."}
     def authenticate_user(self, username, password) -> bool:
-        self.cur.execute("SELECT * FROM users WHERE username = %s", (username,))
-        userData = self.cur.fetchone()
+        self.get_cursor().execute("SELECT * FROM users WHERE username = %s", (username,))
+        userData = self.get_cursor().fetchone()
         ph = PasswordHasher()
         if not userData:
             try:
@@ -40,7 +47,7 @@ class user_auth:
             ph.verify(hashed_password, password)
             if ph.check_needs_rehash(hashed_password):
                 new_hash = ph.hash(password)
-                self.cur.execute("UPDATE users SET password = %s WHERE username = %s", (new_hash, username))
+                self.get_cursor().execute("UPDATE users SET password = %s WHERE username = %s", (new_hash, username))
                 self.conn.commit()
             return {"success": True} 
         except (VerifyMismatchError, VerificationError, InvalidHashError):

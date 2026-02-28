@@ -11,29 +11,37 @@ class inventory:
         self.conn = psycopg2.connect(db_url)
         self.cur = self.conn.cursor()
 
+    def get_cursor(self):
+        try:
+            self.conn.isolation_level
+        except:
+            self.conn = psycopg2.connect(os.getenv("SUPABASE_URL"))
+        self.cur = self.conn.cursor()
+        return self.cur
+    
     def get_inventory(self):
         try:
-            self.cur.execute("SELECT * FROM parts")
-            rows = self.cur.fetchall()
+            self.get_cursor().execute("SELECT * FROM parts")
+            rows = self.get_cursor().fetchall()
             return {"inventory": rows}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
     def add_part(self, name, category, vendor, quantity, min_quantity, part_number=None, url=None, notes=None):
         try:
-            self.cur.execute(
+            self.get_cursor().execute(
                 "INSERT INTO parts (name, category, vendor, quantity, min_quantity, part_number, url, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
                 (name, category, vendor, quantity, min_quantity, part_number, url, notes)
             )
             self.conn.commit()
-            return {"success": True, "id": self.cur.fetchone()[0]}
+            return {"success": True, "id": self.get_cursor().fetchone()[0]}
         except Exception as e:
             self.conn.rollback()
             return {"success": False, "error": str(e)}
 
     def update_inventory(self, id, quantity):
         try:
-            self.cur.execute("UPDATE parts SET quantity = %s WHERE id = %s", (quantity, id))
+            self.get_cursor().execute("UPDATE parts SET quantity = %s WHERE id = %s", (quantity, id))
             self.conn.commit()
             return {"success": True}
         except Exception as e:
@@ -72,7 +80,7 @@ class inventory:
                 return {"success": False, "error": "No fields to update"}
             values.append(id)
             update_query = "UPDATE parts SET " + ", ".join(updates) + " WHERE id = %s"
-            self.cur.execute(update_query, tuple(values))
+            self.get_cursor().execute(update_query, tuple(values))
             self.conn.commit()
             return {"success": True}
         except Exception as e:
@@ -81,7 +89,7 @@ class inventory:
     
     def delete_part(self, id):
         try:
-            self.cur.execute("DELETE FROM parts WHERE id = %s", (id,))
+            self.get_cursor().execute("DELETE FROM parts WHERE id = %s", (id,))
             self.conn.commit()
             return {"success": True}
         except Exception as e:
