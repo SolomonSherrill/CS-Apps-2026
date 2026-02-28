@@ -8,7 +8,7 @@ from typing import Optional
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-vercel-app.vercel.app"],  # your Vercel URL
+    allow_origins=["https://inventory-manager-frontend-nine.vercel.app"],  # your Vercel URL
     allow_methods=["*"],
     allow_headers=["*"],
 )
