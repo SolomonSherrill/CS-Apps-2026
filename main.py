@@ -1,10 +1,17 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from user_auth import user_auth
 from inventory import inventory
 from pydantic import BaseModel
 from typing import Optional
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-vercel-app.vercel.app"],  # your Vercel URL
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class AuthRequest(BaseModel):
     username: str
