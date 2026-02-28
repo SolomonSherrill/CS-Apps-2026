@@ -22,7 +22,7 @@ class inventory:
     def get_inventory(self):
         try:
             self.get_cursor().execute("SELECT * FROM parts")
-            rows = self.get_cursor().fetchall()
+            rows = self.cur.fetchall()
             return {"inventory": rows}
         except Exception as e:
             return {"success": False, "error": str(e)}
@@ -34,7 +34,7 @@ class inventory:
                 (name, category, vendor, quantity, min_quantity, part_number, url, notes)
             )
             self.conn.commit()
-            return {"success": True, "id": self.get_cursor().fetchone()[0]}
+            return {"success": True, "id": self.cur.fetchone()[0]}
         except Exception as e:
             self.conn.rollback()
             return {"success": False, "error": str(e)}
