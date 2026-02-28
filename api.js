@@ -10,6 +10,6 @@ async function login(username, password) {
 }
 
 async function getInventory() {
-    const response = await fetch(`${api}/inventory/all`)
+    const response = await fetch(`${api}/inventory/getall`)
     return response.json()
 }
