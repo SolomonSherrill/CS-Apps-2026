@@ -72,7 +72,7 @@ async def register(request: Request, body: AuthRequest):
     return auth.create_user(body.username, body.password, body.invite_code)
 
 @app.post("/login")
-@limiter.limit("1/minute")
+@limiter.limit("20/minute")
 async def login(request: Request, body: AuthRequest):
     result = auth.authenticate_user(body.username, body.password)
     if result.get("success"):
