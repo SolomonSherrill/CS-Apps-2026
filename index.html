@@ -719,6 +719,13 @@
             .form-grid .full { grid-column: 1; }
             .modal { width: 92vw !important; }
         }
+
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sortable:hover { color: var(--accent); }
+        .sort-icon { font-size: 10px; color: var(--accent); margin-left: 4px; }
     </style>
 </head>
 <body>
@@ -806,6 +813,7 @@
                 <option value="other">Other</option>
             </select>
             <button class="btn-add" onclick="openAddModal()">+ ADD PART</button>
+            <button class="btn-add" style="background:var(--bg3);color:var(--text);border:1px solid var(--border)" onclick="exportCSV()">↓ CSV</button>
         </div>
 
         <!-- Table -->
@@ -821,11 +829,11 @@
             <table id="inventory-table" style="display:none">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Vendor</th>
-                        <th>Part #</th>
-                        <th>Quantity</th>
+                        <th class="sortable" onclick="sortBy(1)">Name <span class="sort-icon" id="sort-1"></span></th>
+                        <th class="sortable" onclick="sortBy(2)">Category <span class="sort-icon" id="sort-2"></span></th>
+                        <th class="sortable" onclick="sortBy(3)">Vendor <span class="sort-icon" id="sort-3"></span></th>
+                        <th class="sortable" onclick="sortBy(6)">Part # <span class="sort-icon" id="sort-6"></span></th>
+                        <th class="sortable" onclick="sortBy(4)">Quantity <span class="sort-icon" id="sort-4"></span></th>
                         <th>Notes</th>
                         <th>Link</th>
                         <th></th>
@@ -1452,6 +1460,58 @@
         } catch (e) {
             console.error('Failed to update quantity', e);
         }
+    }
+
+    // ── SORT ──
+    let sortCol = null;
+    let sortAsc = true;
+
+    function sortBy(col) {
+        if (sortCol === col) {
+            sortAsc = !sortAsc;
+        } else {
+            sortCol = col;
+            sortAsc = true;
+        }
+        // Clear all sort icons
+        [1,2,3,4,6].forEach(c => {
+            const el = document.getElementById('sort-' + c);
+            if (el) el.textContent = '';
+        });
+        const icon = document.getElementById('sort-' + col);
+        if (icon) icon.textContent = sortAsc ? '▲' : '▼';
+
+        allParts.sort((a, b) => {
+            let av = a[col], bv = b[col];
+            if (av === null || av === undefined) av = '';
+            if (bv === null || bv === undefined) bv = '';
+            if (typeof av === 'number' && typeof bv === 'number') {
+                return sortAsc ? av - bv : bv - av;
+            }
+            return sortAsc
+                ? String(av).localeCompare(String(bv))
+                : String(bv).localeCompare(String(av));
+        });
+        filterTable();
+    }
+
+    // ── CSV EXPORT ──
+    function exportCSV() {
+        const headers = ['ID','Name','Category','Vendor','Quantity','Min Quantity','Part Number','URL','Notes','Created At'];
+        const rows = allParts.map(p => p.map(v => {
+            if (v === null || v === undefined) return '';
+            const str = String(v);
+            return str.includes(',') || str.includes('"') || str.includes('\n')
+                ? `"${str.replace(/"/g, '""')}"` : str;
+        }));
+        const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'inventory.csv';
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
 </script>
