@@ -1,14 +1,21 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from jose import jwt
+from datetime import datetime, timedelta
 from user_auth import user_auth
 from inventory import inventory
 from pydantic import BaseModel
 from typing import Optional
+import os
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://inventory-manager-frontend-nine.vercel.app"],  # your Vercel URL
+    allow_origins=["https://inventory-manager-frontend-nine.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -16,6 +23,7 @@ app.add_middleware(
 class AuthRequest(BaseModel):
     username: str
     password: str
+    invite_code: Optional[str] = None
 
 class AddPartRequest(BaseModel):
     name: str
@@ -44,18 +52,29 @@ class EditPartRequest(BaseModel):
 
 auth = user_auth()
 inv = inventory()
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+def create_token(username: str):
+    expire = datetime.utcnow() + timedelta(days=7)
+    return jwt.encode({"sub": username, "exp": expire}, SECRET_KEY, algorithm="HS256")
 
 @app.get("/")
 def root():
     return {"status": "ok"}
 
 @app.post("/register")
-def register(request: AuthRequest):
-    return auth.create_user(request.username, request.password)
+@limiter.limit("1/minute")
+async def register(request: Request, body: AuthRequest):
+    return auth.create_user(body.username, body.password, body.invite_code)
 
 @app.post("/login")
-def login(request: AuthRequest):
-    return auth.authenticate_user(request.username, request.password)
+@limiter.limit("1/minute")
+async def login(request: Request, body: AuthRequest):
+    return auth.authenticate_user(body.username, body.password)
 
 @app.get("/inventory/getall")
 def get_inventory():

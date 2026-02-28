@@ -14,7 +14,9 @@ class user_auth:
     def hash_password(self, password):
         ph = PasswordHasher()
         return ph.hash(password)
-    def create_user(self, username, password):
+    def create_user(self, username, password, invite_code=None):
+        if invite_code != os.getenv("INVITE_CODE"):
+            return {"success": False, "error": "Invalid invite code."}
         hashed_password = self.hash_password(password)
         try:
             self.cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
@@ -32,7 +34,7 @@ class user_auth:
                 ph.verify("fakehash", password)
             except:
                 pass
-            return False
+            return {"success": False, "error": "Invalid username or password"}
         hashed_password = userData[2]
         try:
             ph.verify(hashed_password, password)
