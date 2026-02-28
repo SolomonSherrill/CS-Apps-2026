@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymorphism Inventory System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --bg2: #111111;
+            --bg3: #1a1a1a;
+            --border: #2a2a2a;
+            --accent: #f97316;
+            --accent2: #fb923c;
+            --text: #e5e5e5;
+            --muted: #666;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --low: #eab308;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── AUTH SCREEN ── */
+        #auth-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #auth-screen::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse 80% 60% at 50% -20%, rgba(249,115,22,0.12) 0%, transparent 60%),
+                repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px),
+                repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.02) 40px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .auth-box {
+            position: relative;
+            z-index: 1;
+            width: 380px;
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            padding: 48px 40px;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 42px;
+            letter-spacing: 2px;
+            color: var(--accent);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .auth-subtitle {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .auth-tab {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        .auth-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .field {
+            margin-bottom: 20px;
+        }
+
+        .field label {
+            display: block;
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .field input {
+            width: 100%;
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 14px;
+            padding: 12px 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .field input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 18px;
+            letter-spacing: 2px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent2);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:active { transform: translateY(0); }
+
+        .auth-msg {
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            margin-top: 16px;
+            text-align: center;
+            min-height: 18px;
+        }
+        .auth-msg.error { color: var(--danger); }
+        .auth-msg.success { color: var(--success); }
+
+        /* ── APP ── */
+        #app-screen { display: none; min-height: 100vh; }
+
+        header {
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 24px;
+            letter-spacing: 3px;
+            color: var(--accent);
+        }
+
+        .header-user {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+            letter-spacing: 1px;
+        }
+
+        .btn-logout {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .main {
+            padding: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* ── STATS ── */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            padding: 20px 24px;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+        .stat-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 36px;
+            letter-spacing: 1px;
+            line-height: 1;
+        }
+
+        .stat-value.orange { color: var(--accent); }
+        .stat-value.red { color: var(--danger); }
+        .stat-value.yellow { color: var(--low); }
+
+        /* ── TOOLBAR ── */
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            padding: 10px 14px;
+            outline: none;
+            flex: 1;
+            min-width: 200px;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus { border-color: var(--accent); }
+
+        .filter-select {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            padding: 10px 14px;
+            outline: none;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .filter-select:focus { border-color: var(--accent); }
+
+        .btn-add {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 16px;
+            letter-spacing: 2px;
+            padding: 10px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-add:hover {
+            background: var(--accent2);
+            transform: translateY(-1px);
+        }
+
+        /* ── TABLE ── */
+        .table-wrap {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: var(--bg3);
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            padding: 14px 16px;
+            text-align: left;
+            font-weight: 400;
+        }
+
+        td {
+            padding: 14px 16px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        tr:hover td { background: rgba(249,115,22,0.03); }
+
+        .vendor-badge {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border: 1px solid;
+        }
+
+        .vendor-gobilda { color: #f97316; border-color: #f97316; }
+        .vendor-rev { color: #3b82f6; border-color: #3b82f6; }
+        .vendor-other { color: #a855f7; border-color: #a855f7; }
+
+        .qty-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-num {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 22px;
+            line-height: 1;
+            min-width: 32px;
+        }
+
+        .qty-num.low { color: var(--low); }
+        .qty-num.critical { color: var(--danger); }
+        .qty-num.ok { color: var(--success); }
+
+        .qty-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .qty-btn {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 20px;
+            height: 16px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            line-height: 1;
+        }
+
+        .qty-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .low-indicator {
+            width: 6px;
+            height: 6px;
+            background: var(--low);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .part-num {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .part-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+        }
+
+        .part-link:hover { text-decoration: underline; }
+
+        .empty-state {
+            text-align: center;
+            padding: 64px 32px;
+            color: var(--muted);
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            letter-spacing: 1px;
+        }
+
+        .empty-state .empty-icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            width: 500px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-header {
+            padding: 24px 28px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 24px;
+            letter-spacing: 2px;
+            color: var(--accent);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-size: 20px;
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .modal-close:hover { color: var(--text); }
+
+        .modal-body { padding: 28px; }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-grid .full { grid-column: 1 / -1; }
+
+        .modal-footer {
+            padding: 20px 28px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 1px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+        .btn-submit {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 16px;
+            letter-spacing: 2px;
+            padding: 10px 28px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-submit:hover { background: var(--accent2); }
+
+        .modal-msg {
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            padding: 0 28px 16px;
+            min-height: 18px;
+        }
+        .modal-msg.error { color: var(--danger); }
+        .modal-msg.success { color: var(--success); }
+
+        /* ── LOADING ── */
+        .loading {
+            text-align: center;
+            padding: 48px;
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: var(--muted);
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .section-header {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 20px;
+            letter-spacing: 2px;
+            color: var(--muted);
+        }
+
+        .part-count {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .low-banner {
+            background: rgba(234,179,8,0.08);
+            border: 1px solid rgba(234,179,8,0.3);
+            padding: 12px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            color: var(--low);
+            animation: slideUp 0.3s ease both;
+        }
+    </style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div id="auth-screen">
+    <div class="auth-box">
+        <div class="auth-title">PITBOX</div>
+        <div class="auth-subtitle">Polymorphism Inventory System</div>
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchTab('login')">Login</button>
+            <button class="auth-tab" onclick="switchTab('register')">Register</button>
+        </div>
+        <div class="field">
+            <label>Username</label>
+            <input type="text" id="auth-username" placeholder="enter username" autocomplete="username">
+        </div>
+        <div class="field">
+            <label>Password</label>
+            <input type="password" id="auth-password" placeholder="enter password" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" id="auth-btn" onclick="handleAuth()">LOGIN</button>
+        <div class="auth-msg" id="auth-msg"></div>
+    </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+    <header>
+        <div class="header-left">
+            <div class="logo">PITBOX</div>
+            <div class="header-user" id="header-user"></div>
+        </div>
+        <button class="btn-logout" onclick="logout()">LOGOUT</button>
+    </header>
+
+    <div class="main">
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Parts</div>
+                <div class="stat-value orange" id="stat-total">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Units</div>
+                <div class="stat-value" id="stat-units">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Low Stock</div>
+                <div class="stat-value yellow" id="stat-low">—</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Out of Stock</div>
+                <div class="stat-value red" id="stat-out">—</div>
+            </div>
+        </div>
+
+        <!-- Low stock banner -->
+        <div class="low-banner" id="low-banner" style="display:none">
+            ⚠ <span id="low-banner-text"></span>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <input class="search-input" type="text" id="search-input" placeholder="Search parts..." oninput="filterTable()">
+            <select class="filter-select" id="filter-vendor" onchange="filterTable()">
+                <option value="">All Vendors</option>
+                <option value="gobilda">goBILDA</option>
+                <option value="rev">REV</option>
+                <option value="other">Other</option>
+            </select>
+            <select class="filter-select" id="filter-category" onchange="filterTable()">
+                <option value="">All Categories</option>
+                <option value="motor">Motor</option>
+                <option value="servo">Servo</option>
+                <option value="sensor">Sensor</option>
+                <option value="electronics">Electronics</option>
+                <option value="hardware">Hardware</option>
+                <option value="structural">Structural</option>
+                <option value="3d printed">3D Printed</option>
+                <option value="other">Other</option>
+            </select>
+            <button class="btn-add" onclick="openAddModal()">+ ADD PART</button>
+        </div>
+
+        <!-- Table -->
+        <div class="section-header">
+            <div class="section-title">INVENTORY</div>
+            <div class="part-count" id="part-count"></div>
+        </div>
+        <div class="table-wrap">
+            <div class="loading" id="table-loading">
+                <div class="spinner"></div>
+                LOADING INVENTORY...
+            </div>
+            <table id="inventory-table" style="display:none">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Vendor</th>
+                        <th>Part #</th>
+                        <th>Quantity</th>
+                        <th>Notes</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-body"></tbody>
+            </table>
+            <div class="empty-state" id="empty-state" style="display:none">
+                <div class="empty-icon">📦</div>
+                No parts found
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="add-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">ADD PART</div>
+            <button class="modal-close" onclick="closeAddModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-grid">
+                <div class="field full">
+                    <label>Part Name *</label>
+                    <input type="text" id="add-name" placeholder="e.g. 5203 Series Motor">
+                </div>
+                <div class="field">
+                    <label>Category *</label>
+                    <select class="filter-select" id="add-category" style="width:100%">
+                        <option value="">Select...</option>
+                        <option value="motor">Motor</option>
+                        <option value="servo">Servo</option>
+                        <option value="sensor">Sensor</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="hardware">Hardware</option>
+                        <option value="structural">Structural</option>
+                        <option value="3d printed">3D Printed</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Vendor *</label>
+                    <select class="filter-select" id="add-vendor" style="width:100%">
+                        <option value="">Select...</option>
+                        <option value="gobilda">goBILDA</option>
+                        <option value="rev">REV</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Quantity *</label>
+                    <input type="number" id="add-quantity" placeholder="0" min="0">
+                </div>
+                <div class="field">
+                    <label>Min Quantity *</label>
+                    <input type="number" id="add-min-quantity" placeholder="2" min="0">
+                </div>
+                <div class="field full">
+                    <label>Part Number</label>
+                    <input type="text" id="add-part-number" placeholder="e.g. 3213-0001-0014">
+                </div>
+                <div class="field full">
+                    <label>URL</label>
+                    <input type="url" id="add-url" placeholder="https://...">
+                </div>
+                <div class="field full">
+                    <label>Notes</label>
+                    <input type="text" id="add-notes" placeholder="Optional notes">
+                </div>
+            </div>
+        </div>
+        <div class="modal-msg" id="add-msg"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+            <button class="btn-submit" onclick="submitAddPart()">ADD PART</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'https://your-app.onrender.com'; // ← CHANGE THIS
+    let currentUser = null;
+    let allParts = [];
+    let activeTab = 'login';
+
+    // ── AUTH ──
+    function switchTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.auth-tab').forEach((t, i) => {
+            t.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+        });
+        document.getElementById('auth-btn').textContent = tab === 'login' ? 'LOGIN' : 'REGISTER';
+        document.getElementById('auth-msg').textContent = '';
+    }
+
+    async function handleAuth() {
+        const username = document.getElementById('auth-username').value.trim();
+        const password = document.getElementById('auth-password').value;
+        const msg = document.getElementById('auth-msg');
+
+        if (!username || !password) {
+            msg.className = 'auth-msg error';
+            msg.textContent = 'Please fill in all fields';
+            return;
+        }
+
+        const btn = document.getElementById('auth-btn');
+        btn.textContent = '...';
+        btn.disabled = true;
+
+        try {
+            const endpoint = activeTab === 'login' ? '/login' : '/register';
+            const res = await fetch(API + endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+
+            if (data.success === false) {
+                msg.className = 'auth-msg error';
+                msg.textContent = data.error || 'Something went wrong';
+            } else if (activeTab === 'register') {
+                msg.className = 'auth-msg success';
+                msg.textContent = 'Account created! Logging in...';
+                setTimeout(() => loginSuccess(username), 800);
+            } else {
+                loginSuccess(username);
+            }
+        } catch (e) {
+            msg.className = 'auth-msg error';
+            msg.textContent = 'Could not reach server';
+        }
+
+        btn.textContent = activeTab === 'login' ? 'LOGIN' : 'REGISTER';
+        btn.disabled = false;
+    }
+
+    function loginSuccess(username) {
+        currentUser = username;
+        document.getElementById('header-user').textContent = username.toUpperCase();
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app-screen').style.display = 'block';
+        loadInventory();
+    }
+
+    function logout() {
+        currentUser = null;
+        allParts = [];
+        document.getElementById('auth-screen').style.display = 'flex';
+        document.getElementById('app-screen').style.display = 'none';
+        document.getElementById('auth-password').value = '';
+        document.getElementById('auth-msg').textContent = '';
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && document.getElementById('auth-screen').style.display !== 'none') {
+            handleAuth();
+        }
+    });
+
+    // ── INVENTORY ──
+    async function loadInventory() {
+        document.getElementById('table-loading').style.display = 'block';
+        document.getElementById('inventory-table').style.display = 'none';
+        document.getElementById('empty-state').style.display = 'none';
+
+        try {
+            const res = await fetch(API + '/inventory/getall');
+            const data = await res.json();
+            allParts = data.inventory || [];
+            renderTable(allParts);
+            updateStats(allParts);
+        } catch (e) {
+            document.getElementById('table-loading').innerHTML = '<div style="color:var(--danger);font-family:DM Mono,monospace;font-size:12px">Failed to load inventory</div>';
+        }
+    }
+
+    function updateStats(parts) {
+        const total = parts.length;
+        const units = parts.reduce((s, p) => s + (p[3] || 0), 0);
+        const low = parts.filter(p => p[3] <= p[4] && p[3] > 0).length;
+        const out = parts.filter(p => p[3] === 0).length;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-units').textContent = units;
+        document.getElementById('stat-low').textContent = low;
+        document.getElementById('stat-out').textContent = out;
+
+        const banner = document.getElementById('low-banner');
+        if (low > 0 || out > 0) {
+            banner.style.display = 'flex';
+            let msgs = [];
+            if (low > 0) msgs.push(`${low} part${low > 1 ? 's' : ''} running low`);
+            if (out > 0) msgs.push(`${out} part${out > 1 ? 's' : ''} out of stock`);
+            document.getElementById('low-banner-text').textContent = msgs.join(' · ');
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
+    function renderTable(parts) {
+        document.getElementById('table-loading').style.display = 'none';
+
+        if (parts.length === 0) {
+            document.getElementById('inventory-table').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'block';
+            document.getElementById('part-count').textContent = '0 parts';
+            return;
+        }
+
+        document.getElementById('inventory-table').style.display = 'table';
+        document.getElementById('empty-state').style.display = 'none';
+        document.getElementById('part-count').textContent = `${parts.length} part${parts.length !== 1 ? 's' : ''}`;
+
+        // columns: id, name, category, vendor, quantity, min_quantity, part_number, url, notes, created_at
+        const tbody = document.getElementById('inventory-body');
+        tbody.innerHTML = parts.map(p => {
+            const [id, name, category, vendor, quantity, min_qty, part_number, url, notes] = p;
+            const qtyClass = quantity === 0 ? 'critical' : quantity <= min_qty ? 'low' : 'ok';
+            const showDot = quantity <= min_qty;
+            const vendorClass = vendor === 'gobilda' ? 'vendor-gobilda' : vendor === 'rev' ? 'vendor-rev' : 'vendor-other';
+            const vendorLabel = vendor === 'gobilda' ? 'goBILDA' : vendor === 'rev' ? 'REV' : 'Other';
+
+            return `<tr>
+                <td><strong>${name}</strong></td>
+                <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${category}</td>
+                <td><span class="vendor-badge ${vendorClass}">${vendorLabel}</span></td>
+                <td><span class="part-num">${part_number || '—'}</span></td>
+                <td>
+                    <div class="qty-cell">
+                        ${showDot ? '<div class="low-indicator"></div>' : ''}
+                        <span class="qty-num ${qtyClass}">${quantity}</span>
+                        <div class="qty-btns">
+                            <button class="qty-btn" onclick="adjustQty(${id}, ${quantity}, 1)">▲</button>
+                            <button class="qty-btn" onclick="adjustQty(${id}, ${quantity}, -1)">▼</button>
+                        </div>
+                    </div>
+                </td>
+                <td style="font-size:13px;color:var(--muted)">${notes || '—'}</td>
+                <td>${url ? `<a class="part-link" href="${url}" target="_blank">↗ link</a>` : '—'}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function filterTable() {
+        const search = document.getElementById('search-input').value.toLowerCase();
+        const vendor = document.getElementById('filter-vendor').value;
+        const category = document.getElementById('filter-category').value;
+
+        const filtered = allParts.filter(p => {
+            const [id, name, cat, ven, quantity, min_qty, part_number] = p;
+            const matchSearch = !search || name.toLowerCase().includes(search) || (part_number && part_number.toLowerCase().includes(search));
+            const matchVendor = !vendor || ven === vendor;
+            const matchCategory = !category || cat === category;
+            return matchSearch && matchVendor && matchCategory;
+        });
+
+        renderTable(filtered);
+    }
+
+    async function adjustQty(id, currentQty, delta) {
+        const newQty = Math.max(0, currentQty + delta);
+        try {
+            const res = await fetch(API + '/inventory/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, quantity: newQty })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Update local data
+                const part = allParts.find(p => p[0] === id);
+                if (part) part[4] = newQty;
+                filterTable();
+                updateStats(allParts);
+            }
+        } catch (e) {
+            console.error('Failed to update quantity', e);
+        }
+    }
+
+    // ── ADD MODAL ──
+    function openAddModal() {
+        document.getElementById('add-modal').classList.add('open');
+        document.getElementById('add-msg').textContent = '';
+    }
+
+    function closeAddModal() {
+        document.getElementById('add-modal').classList.remove('open');
+        ['add-name','add-quantity','add-min-quantity','add-part-number','add-url','add-notes'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        document.getElementById('add-category').value = '';
+        document.getElementById('add-vendor').value = '';
+    }
+
+    async function submitAddPart() {
+        const name = document.getElementById('add-name').value.trim();
+        const category = document.getElementById('add-category').value;
+        const vendor = document.getElementById('add-vendor').value;
+        const quantity = parseInt(document.getElementById('add-quantity').value);
+        const min_quantity = parseInt(document.getElementById('add-min-quantity').value);
+        const part_number = document.getElementById('add-part-number').value.trim() || null;
+        const url = document.getElementById('add-url').value.trim() || null;
+        const notes = document.getElementById('add-notes').value.trim() || null;
+        const msg = document.getElementById('add-msg');
+
+        if (!name || !category || !vendor || isNaN(quantity) || isNaN(min_quantity)) {
+            msg.className = 'modal-msg error';
+            msg.textContent = 'Please fill in all required fields';
+            return;
+        }
+
+        try {
+            const res = await fetch(API + '/inventory/add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, category, vendor, quantity, min_quantity, part_number, url, notes })
+            });
+            const data = await res.json();
+
+            if (data.success === false) {
+                msg.className = 'modal-msg error';
+                msg.textContent = data.error || 'Failed to add part';
+            } else {
+                msg.className = 'modal-msg success';
+                msg.textContent = 'Part added!';
+                setTimeout(() => {
+                    closeAddModal();
+                    loadInventory();
+                }, 600);
+            }
+        } catch (e) {
+            msg.className = 'modal-msg error';
+            msg.textContent = 'Could not reach server';
+        }
+    }
+</script>
+</body>
+</html>
