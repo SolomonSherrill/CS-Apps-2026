@@ -34,7 +34,7 @@ class user_auth:
             return {"success": False, "error": "Username already exists."}
     def authenticate_user(self, username, password) -> bool:
         self.get_cursor().execute("SELECT * FROM users WHERE username = %s", (username,))
-        userData = self.get_cursor().fetchone()
+        userData = self.cur.fetchone()
         ph = PasswordHasher()
         if not userData:
             try:
