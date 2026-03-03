@@ -1174,7 +1174,7 @@
             return;
         }
 
-        document.getElementById('inventory-table').style.display = 'table';
+        document.getElementById('inventory-table').style.display = window.innerWidth <= 768 ? 'none' : 'table';
         document.getElementById('empty-state').style.display = 'none';
         document.getElementById('part-count').textContent = `${parts.length} part${parts.length !== 1 ? 's' : ''}`;
 
