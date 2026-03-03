@@ -91,7 +91,7 @@ def add_part(request: AddPartRequest):
 def update_inventory(request: UpdateRequest):
     return inv.update_inventory(request.id, request.quantity)
 
-@app.post("/inventory/edit")
+@app.put("/inventory/edit")
 def edit_part(request: EditPartRequest):
     return inv.edit_part(request.id, request.name, request.category, request.vendor, request.quantity, request.min_quantity, request.part_number, request.url, request.notes)
 

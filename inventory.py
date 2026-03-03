@@ -10,26 +10,21 @@ class inventory:
             raise ValueError("SUPABASE_URL not found in environment variables.")
         self.conn = psycopg2.connect(db_url)
         self.cur = self.conn.cursor()
-
-    def get_cursor(self):
-        try:
-            self.conn.isolation_level
-        except:
-            self.conn = psycopg2.connect(os.getenv("SUPABASE_URL"))
+    def connect(self):
+        self.conn = psycopg2.connect(os.getenv("SUPABASE_URL"))
         self.cur = self.conn.cursor()
-        return self.cur
-    
     def get_inventory(self):
         try:
-            self.get_cursor().execute("SELECT * FROM parts")
+            self.connect()
+            self.cur.execute("SELECT * FROM parts")
             rows = self.cur.fetchall()
             return {"inventory": rows}
         except Exception as e:
             return {"success": False, "error": str(e)}
-
     def add_part(self, name, category, vendor, quantity, min_quantity, part_number=None, url=None, notes=None):
         try:
-            self.get_cursor().execute(
+            self.connect()
+            self.cur.execute(
                 "INSERT INTO parts (name, category, vendor, quantity, min_quantity, part_number, url, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id",
                 (name, category, vendor, quantity, min_quantity, part_number, url, notes)
             )
@@ -41,7 +36,8 @@ class inventory:
 
     def update_inventory(self, id, quantity):
         try:
-            self.get_cursor().execute("UPDATE parts SET quantity = %s WHERE id = %s", (quantity, id))
+            self.connect()
+            self.cur.execute("UPDATE parts SET quantity = %s WHERE id = %s", (quantity, id))
             self.conn.commit()
             return {"success": True}
         except Exception as e:
@@ -50,6 +46,7 @@ class inventory:
         
     def edit_part(self, id, name=None, category=None, vendor=None, quantity=None, min_quantity=None, part_number=None, url=None, notes=None):
         try:
+            self.connect()
             updates = []
             values = []
             if name is not None:
@@ -80,7 +77,7 @@ class inventory:
                 return {"success": False, "error": "No fields to update"}
             values.append(id)
             update_query = "UPDATE parts SET " + ", ".join(updates) + " WHERE id = %s"
-            self.get_cursor().execute(update_query, tuple(values))
+            self.cur.execute(update_query, tuple(values))
             self.conn.commit()
             return {"success": True}
         except Exception as e:
@@ -89,7 +86,8 @@ class inventory:
     
     def delete_part(self, id):
         try:
-            self.get_cursor().execute("DELETE FROM parts WHERE id = %s", (id,))
+            self.connect()
+            self.cur.execute("DELETE FROM parts WHERE id = %s", (id,))
             self.conn.commit()
             return {"success": True}
         except Exception as e:
