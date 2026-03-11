@@ -1,6 +1,6 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from jose import jwt
+from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from user_auth import user_auth
 from inventory import inventory
@@ -53,6 +53,8 @@ class EditPartRequest(BaseModel):
 auth = user_auth()
 inv = inventory()
 SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY not found in .env")
 
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -62,6 +64,19 @@ def create_token(username: str):
     expire = datetime.utcnow() + timedelta(days=7)
     return jwt.encode({"sub": username, "exp": expire}, SECRET_KEY, algorithm="HS256")
 
+def verify_request(request: Request):
+    auth = request.headers.get("Authorization","")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    token = auth.split(" ",1)[1].strip()
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    username = payload.get("sub")
+    if not username:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    return username
 @app.get("/")
 def root():
     return {"status": "ok"}
@@ -80,21 +95,21 @@ async def login(request: Request, body: AuthRequest):
     return result
 
 @app.get("/inventory/getall")
-def get_inventory():
+def get_inventory(username: str = Depends(verify_request)):
     return inv.get_inventory()
 
 @app.post("/inventory/add")
-def add_part(request: AddPartRequest):
+def add_part(request: AddPartRequest, username: str = Depends(verify_request)):
     return inv.add_part(request.name, request.category, request.vendor, request.quantity, request.min_quantity, request.part_number, request.url, request.notes)
 
 @app.post("/inventory/update")
-def update_inventory(request: UpdateRequest):
+def update_inventory(request: UpdateRequest, username: str = Depends(verify_request)):
     return inv.update_inventory(request.id, request.quantity)
 
 @app.put("/inventory/edit")
-def edit_part(request: EditPartRequest):
+def edit_part(request: EditPartRequest, username: str = Depends(verify_request)):
     return inv.edit_part(request.id, request.name, request.category, request.vendor, request.quantity, request.min_quantity, request.part_number, request.url, request.notes)
 
 @app.delete("/inventory/delete")
-def delete_part(id: int):
+def delete_part(id: int, username: str = Depends(verify_request)):
     return inv.delete_part(id)

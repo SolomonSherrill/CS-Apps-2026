@@ -21,6 +21,12 @@ class inventory:
             return {"inventory": rows}
         except Exception as e:
             return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass
     def add_part(self, name, category, vendor, quantity, min_quantity, part_number=None, url=None, notes=None):
         try:
             self.connect()
@@ -33,6 +39,12 @@ class inventory:
         except Exception as e:
             self.conn.rollback()
             return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass
 
     def update_inventory(self, id, quantity):
         try:
@@ -43,6 +55,12 @@ class inventory:
         except Exception as e:
             self.conn.rollback()
             return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass
         
     def edit_part(self, id, name=None, category=None, vendor=None, quantity=None, min_quantity=None, part_number=None, url=None, notes=None):
         try:
@@ -83,6 +101,12 @@ class inventory:
         except Exception as e:
             self.conn.rollback()
             return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass
     
     def delete_part(self, id):
         try:
@@ -93,3 +117,9 @@ class inventory:
         except Exception as e:
             self.conn.rollback()
             return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass

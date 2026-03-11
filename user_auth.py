@@ -43,6 +43,12 @@ class user_auth:
         except psycopg2.errors.UniqueViolation:
             self.conn.rollback()
             return {"success": False, "error": "Username already exists."}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass
     def authenticate_user(self, username, password) -> bool:
         try:
             self.connect()
@@ -67,3 +73,9 @@ class user_auth:
                 return {"success": False, "error": "Invalid username or password"}
         except Exception as e:
             return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass

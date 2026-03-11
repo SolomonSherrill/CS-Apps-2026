@@ -1031,6 +1031,60 @@
     let allParts = [];
     let activeTab = 'login';
 
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeJsString(value) {
+        return String(value)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029');
+    }
+
+    function sanitizeUrl(value) {
+        if (!value) return null;
+        try {
+            const url = new URL(value, window.location.origin);
+            if (url.protocol === 'http:' || url.protocol === 'https:') {
+                return url.href;
+            }
+        } catch (e) {
+            return null;
+        }
+        return null;
+    }
+
+    function getAuthHeaders() {
+        const token = localStorage.getItem('token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+        return headers;
+    }
+
+    async function fetchWithAuth(url, options = {}) {
+        const headers = options.headers
+            ? { ...options.headers }
+            : {};
+        if (!headers.Authorization) {
+            const authHeaders = getAuthHeaders();
+            Object.assign(headers, authHeaders);
+        }
+        const res = await fetch(url, { ...options, headers });
+        if (res.status === 401) {
+            logout();
+        }
+        return res;
+    }
+
     // ── AUTH ──
     function switchTab(tab) {
         activeTab = tab;
@@ -1131,7 +1185,7 @@
         document.getElementById('empty-state').style.display = 'none';
 
         try {
-            const res = await fetch(API + '/inventory/getall');
+            const res = await fetchWithAuth(API + '/inventory/getall');
             const data = await res.json();
             allParts = data.inventory || [];
             renderTable(allParts);
@@ -1182,27 +1236,34 @@
         const cards = document.getElementById('inventory-cards');
         cards.innerHTML = parts.map(p => {
             const [id, name, category, vendor, quantity, min_qty, part_number, url, notes] = p;
+            const safeName = escapeHtml(name ?? '');
+            const safeNameJs = escapeJsString(name ?? '');
+            const safeCategory = escapeHtml(category ?? '');
+            const safePartNumber = part_number ? escapeHtml(part_number) : '';
+            const safeNotes = notes ? escapeHtml(notes) : '';
+            const safeUrl = sanitizeUrl(url);
+            const safeUrlHtml = safeUrl ? escapeHtml(safeUrl) : '';
             const qtyClass = quantity === 0 ? 'critical' : quantity <= min_qty ? 'low' : 'ok';
             const cardClass = quantity === 0 ? 'no-stock' : quantity <= min_qty ? 'low-stock' : '';
             const vendorLabel = vendor === 'gobilda' ? 'goBILDA' : vendor === 'rev' ? 'REV' : 'Other';
             const vendorClass = vendor === 'gobilda' ? 'vendor-gobilda' : vendor === 'rev' ? 'vendor-rev' : 'vendor-other';
             return `<div class="part-card ${cardClass}">
                 <div class="part-card-header">
-                    <div class="part-card-name">${name}</div>
+                    <div class="part-card-name">${safeName}</div>
                     <span class="part-card-qty ${qtyClass}" title="Click to set quantity" onclick="openQtyModal(${id}, ${quantity})">${quantity}</span>
                 </div>
                 <div class="part-card-meta">
                     <span class="vendor-badge ${vendorClass}">${vendorLabel}</span>
-                    <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${category}</span>
-                    ${part_number ? `<span class="part-num">${part_number}</span>` : ''}
-                    ${url ? `<a class="part-link" href="${url}" target="_blank">↗ link</a>` : ''}
+                    <span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">${safeCategory}</span>
+                    ${part_number ? `<span class="part-num">${safePartNumber}</span>` : ''}
+                    ${safeUrl ? `<a class="part-link" href="${safeUrlHtml}" target="_blank" rel="noopener noreferrer">↗ link</a>` : ''}
                 </div>
-                ${notes ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${notes}</div>` : ''}
+                ${notes ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${safeNotes}</div>` : ''}
                 <div class="part-card-actions">
                     <button onclick="adjustQty(${id}, ${quantity}, 1)">▲ ADD</button>
                     <button onclick="adjustQty(${id}, ${quantity}, -1)">▼ REMOVE</button>
                     <button onclick="openEditModal(${id})">EDIT</button>
-                    <button class="del-btn" onclick="openDeleteConfirm(${id}, '${name.replace(/'/g, "\'")}')">DEL</button>
+                    <button class="del-btn" onclick="openDeleteConfirm(${id}, '${safeNameJs}')">DEL</button>
                 </div>
             </div>`;
         }).join('');
@@ -1211,16 +1272,23 @@
         const tbody = document.getElementById('inventory-body');
         tbody.innerHTML = parts.map(p => {
             const [id, name, category, vendor, quantity, min_qty, part_number, url, notes, created_at] = p;
+            const safeName = escapeHtml(name ?? '');
+            const safeNameJs = escapeJsString(name ?? '');
+            const safeCategory = escapeHtml(category ?? '');
+            const safePartNumber = part_number ? escapeHtml(part_number) : '';
+            const safeNotes = notes ? escapeHtml(notes) : '';
+            const safeUrl = sanitizeUrl(url);
+            const safeUrlHtml = safeUrl ? escapeHtml(safeUrl) : '';
             const qtyClass = quantity === 0 ? 'critical' : quantity <= min_qty ? 'low' : 'ok';
             const showDot = quantity <= min_qty;
             const vendorClass = vendor === 'gobilda' ? 'vendor-gobilda' : vendor === 'rev' ? 'vendor-rev' : 'vendor-other';
             const vendorLabel = vendor === 'gobilda' ? 'goBILDA' : vendor === 'rev' ? 'REV' : 'Other';
 
             return `<tr>
-                <td><strong>${name}</strong></td>
-                <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${category}</td>
+                <td><strong>${safeName}</strong></td>
+                <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${safeCategory}</td>
                 <td><span class="vendor-badge ${vendorClass}">${vendorLabel}</span></td>
-                <td><span class="part-num">${part_number || '—'}</span></td>
+                <td><span class="part-num">${part_number ? safePartNumber : '—'}</span></td>
                 <td>
                     <div class="qty-cell">
                         ${showDot ? '<div class="low-indicator"></div>' : ''}
@@ -1231,12 +1299,12 @@
                         </div>
                     </div>
                 </td>
-                <td style="font-size:13px;color:var(--muted)">${notes || '—'}</td>
-                <td>${url ? `<a class="part-link" href="${url}" target="_blank">↗ link</a>` : '—'}</td>
+                <td style="font-size:13px;color:var(--muted)">${notes ? safeNotes : '—'}</td>
+                <td>${safeUrl ? `<a class="part-link" href="${safeUrlHtml}" target="_blank" rel="noopener noreferrer">↗ link</a>` : '—'}</td>
                 <td>
                     <div style="display:flex;gap:6px">
                         <button class="qty-btn" style="width:auto;padding:0 8px;height:24px;font-family:'DM Mono',monospace;font-size:10px" onclick="openEditModal(${id})">EDIT</button>
-                        <button class="qty-btn" style="width:auto;padding:0 8px;height:24px;font-family:'DM Mono',monospace;font-size:10px;color:var(--danger);border-color:var(--danger)" onclick="openDeleteConfirm(${id}, '${name.replace(/'/g, "\\'")}')">DEL</button>
+                        <button class="qty-btn" style="width:auto;padding:0 8px;height:24px;font-family:'DM Mono',monospace;font-size:10px;color:var(--danger);border-color:var(--danger)" onclick="openDeleteConfirm(${id}, '${safeNameJs}')">DEL</button>
                     </div>
                 </td>
             </tr>`;
@@ -1262,9 +1330,8 @@
     async function adjustQty(id, currentQty, delta) {
         const newQty = Math.max(0, currentQty + delta);
         try {
-            const res = await fetch(API + '/inventory/update', {
+            const res = await fetchWithAuth(API + '/inventory/update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, quantity: newQty })
             });
             const data = await res.json();
@@ -1313,9 +1380,8 @@
         }
 
         try {
-            const res = await fetch(API + '/inventory/add', {
+            const res = await fetchWithAuth(API + '/inventory/add', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, category, vendor, quantity, min_quantity, part_number, url, notes })
             });
             const data = await res.json();
@@ -1376,9 +1442,8 @@
             notes: document.getElementById('edit-notes').value.trim() || null,
         };
         try {
-            const res = await fetch(API + '/inventory/edit', {
+            const res = await fetchWithAuth(API + '/inventory/edit', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
@@ -1412,7 +1477,9 @@
 
     async function confirmDelete() {
         try {
-            const res = await fetch(API + `/inventory/delete?id=${deletingId}`, { method: 'DELETE' });
+            const res = await fetchWithAuth(API + `/inventory/delete?id=${deletingId}`, {
+                method: 'DELETE',
+            });
             const data = await res.json();
             if (data.success) {
                 allParts = allParts.filter(p => p[0] !== deletingId);
@@ -1444,9 +1511,8 @@
         const newQty = parseInt(document.getElementById('qty-input').value);
         if (isNaN(newQty) || newQty < 0) return;
         try {
-            const res = await fetch(API + '/inventory/update', {
+            const res = await fetchWithAuth(API + '/inventory/update', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: qtyEditId, quantity: newQty })
             });
             const data = await res.json();
@@ -1501,8 +1567,10 @@
         const rows = allParts.map(p => p.map(v => {
             if (v === null || v === undefined) return '';
             const str = String(v);
-            return str.includes(',') || str.includes('"') || str.includes('\n')
-                ? `"${str.replace(/"/g, '""')}"` : str;
+            const needsFormulaEscape = /^[=+\-@]/.test(str);
+            const safe = needsFormulaEscape ? `'${str}` : str;
+            return safe.includes(',') || safe.includes('"') || safe.includes('\n')
+                ? `"${safe.replace(/"/g, '""')}"` : safe;
         }));
         const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
