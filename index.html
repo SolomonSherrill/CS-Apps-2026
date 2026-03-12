@@ -1127,7 +1127,23 @@
             } else if (activeTab === 'register') {
                 msg.className = 'auth-msg success';
                 msg.textContent = 'Account created! Logging in...';
-                setTimeout(() => loginSuccess(username, data.token), 800);
+                try {
+                    const loginRes = await fetch(API + '/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+                    const loginData = await loginRes.json();
+                    if (loginData.success) {
+                        loginSuccess(username, loginData.token);
+                    } else {
+                        msg.className = 'auth-msg error';
+                        msg.textContent = loginData.error || 'Login failed';
+                    }
+                } catch (e) {
+                    msg.className = 'auth-msg error';
+                    msg.textContent = 'Could not reach server';
+                }
             } else {
                 loginSuccess(username, data.token);
             }
