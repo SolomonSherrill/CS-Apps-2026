@@ -268,19 +268,34 @@
             color: var(--danger);
         }
 
-        .theme-select {
-            background: var(--bg3);
+        .theme-switch {
+            display: flex;
+            gap: 6px;
+            padding: 4px;
             border: 1px solid var(--border);
-            color: var(--text);
-            font-family: 'DM Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 1px;
-            padding: 6px 10px;
-            cursor: pointer;
-            transition: border-color 0.2s;
+            background: var(--bg3);
         }
 
-        .theme-select:focus { border-color: var(--accent); outline: none; }
+        .theme-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--muted);
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 6px 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .theme-btn:hover { color: var(--text); }
+
+        .theme-btn.active {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: rgba(249,115,22,0.05);
+        }
 
         .main {
             padding: 32px;
@@ -820,12 +835,12 @@
             <div class="header-user" id="header-user"></div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-            <select class="theme-select" id="theme-select" onchange="setTheme(this.value)">
-                <option value="default">DEFAULT</option>
-                <option value="glacier">GLACIER</option>
-                <option value="ember">EMBER</option>
-                <option value="neon">NEON</option>
-            </select>
+            <div class="theme-switch" id="theme-switch">
+                <button class="theme-btn" data-theme="default" onclick="setTheme('default')">Default</button>
+                <button class="theme-btn" data-theme="glacier" onclick="setTheme('glacier')">Glacier</button>
+                <button class="theme-btn" data-theme="ember" onclick="setTheme('ember')">Ember</button>
+                <button class="theme-btn" data-theme="neon" onclick="setTheme('neon')">Neon</button>
+            </div>
             <button class="btn-logout" onclick="logout()">LOGOUT</button>
         </div>
     </header>
@@ -1141,6 +1156,9 @@
             document.body.setAttribute('data-theme', theme);
         }
         localStorage.setItem('theme', theme);
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === theme);
+        });
     }
 
     async function fetchWithAuth(url, options = {}) {
@@ -1263,8 +1281,6 @@
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
         const theme = localStorage.getItem('theme') || 'default';
-        const themeSelect = document.getElementById('theme-select');
-        if (themeSelect) themeSelect.value = theme;
         setTheme(theme);
         if (token && username) {
             loginSuccess(username, null); // null so we don't overwrite the existing token
