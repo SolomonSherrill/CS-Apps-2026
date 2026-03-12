@@ -82,7 +82,7 @@ def root():
     return {"status": "ok"}
 
 @app.post("/register")
-@limiter.limit("1/minute")
+@limiter.limit("1000/hour")
 async def register(request: Request, body: AuthRequest):
     return auth.create_user(body.username, body.password, body.invite_code)
 
