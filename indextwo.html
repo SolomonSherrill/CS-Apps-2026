@@ -20,48 +20,6 @@
             --low: #eab308;
         }
 
-        [data-theme="glacier"] {
-            --bg: #0b1220;
-            --bg2: #0f172a;
-            --bg3: #111c33;
-            --border: #243048;
-            --accent: #38bdf8;
-            --accent2: #7dd3fc;
-            --text: #e2e8f0;
-            --muted: #6b7280;
-            --danger: #f87171;
-            --success: #34d399;
-            --low: #facc15;
-        }
-
-        [data-theme="ember"] {
-            --bg: #120a0a;
-            --bg2: #1a0f10;
-            --bg3: #221314;
-            --border: #332022;
-            --accent: #f43f5e;
-            --accent2: #fb7185;
-            --text: #fde8e8;
-            --muted: #8b6d70;
-            --danger: #fb7185;
-            --success: #34d399;
-            --low: #f59e0b;
-        }
-
-        [data-theme="neon"] {
-            --bg: #0a0a12;
-            --bg2: #0f0f1a;
-            --bg3: #141423;
-            --border: #2a2a3d;
-            --accent: #a3e635;
-            --accent2: #d9f99d;
-            --text: #eef2ff;
-            --muted: #6b7280;
-            --danger: #f43f5e;
-            --success: #22c55e;
-            --low: #f59e0b;
-        }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -267,20 +225,6 @@
             border-color: var(--danger);
             color: var(--danger);
         }
-
-        .theme-select {
-            background: var(--bg3);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: 'DM Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 1px;
-            padding: 6px 10px;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        .theme-select:focus { border-color: var(--accent); outline: none; }
 
         .main {
             padding: 32px;
@@ -819,15 +763,7 @@
             <div class="logo">PITBOX</div>
             <div class="header-user" id="header-user"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
-            <select class="theme-select" id="theme-select" onchange="setTheme(this.value)">
-                <option value="default">DEFAULT</option>
-                <option value="glacier">GLACIER</option>
-                <option value="ember">EMBER</option>
-                <option value="neon">NEON</option>
-            </select>
-            <button class="btn-logout" onclick="logout()">LOGOUT</button>
-        </div>
+        <button class="btn-logout" onclick="logout()">LOGOUT</button>
     </header>
 
     <div class="main">
@@ -1134,15 +1070,6 @@
         return headers;
     }
 
-    function setTheme(theme) {
-        if (theme === 'default') {
-            document.body.removeAttribute('data-theme');
-        } else {
-            document.body.setAttribute('data-theme', theme);
-        }
-        localStorage.setItem('theme', theme);
-    }
-
     async function fetchWithAuth(url, options = {}) {
         const headers = options.headers
             ? { ...options.headers }
@@ -1262,10 +1189,6 @@
     window.addEventListener('load', () => {
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
-        const theme = localStorage.getItem('theme') || 'default';
-        const themeSelect = document.getElementById('theme-select');
-        if (themeSelect) themeSelect.value = theme;
-        setTheme(theme);
         if (token && username) {
             loginSuccess(username, null); // null so we don't overwrite the existing token
         }
