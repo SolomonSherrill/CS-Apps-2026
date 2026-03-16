@@ -268,6 +268,23 @@
             color: var(--danger);
         }
 
+        .btn-admin {
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-admin:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
         .theme-switch {
             display: flex;
             gap: 6px;
@@ -841,6 +858,7 @@
                 <button class="theme-btn" data-theme="ember" onclick="setTheme('ember')">Ember</button>
                 <button class="theme-btn" data-theme="neon" onclick="setTheme('neon')">Neon</button>
             </div>
+            <button class="btn-admin" id="btn-admin-users" style="display:none" onclick="openUsersModal()">USERS</button>
             <button class="btn-logout" onclick="logout()">LOGOUT</button>
         </div>
     </header>
@@ -1103,6 +1121,24 @@
     </div>
 </div>
 
+<!-- USERS MODAL -->
+<div class="modal-overlay" id="users-modal">
+    <div class="modal" style="width:420px">
+        <div class="modal-header">
+            <div class="modal-title">USERS</div>
+            <button class="modal-close" onclick="closeUsersModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div id="users-list" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);line-height:1.6">
+                Loading...
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeUsersModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 
 <script>
     const API = 'https://robotics-backend-ddu8.onrender.com';
@@ -1176,6 +1212,45 @@
         return res;
     }
 
+    function updateAdminUI(role) {
+        const btn = document.getElementById('btn-admin-users');
+        if (!btn) return;
+        btn.style.display = role === 'admin' ? 'inline-block' : 'none';
+    }
+
+    function openUsersModal() {
+        document.getElementById('users-modal').classList.add('open');
+        loadUsers();
+    }
+
+    function closeUsersModal() {
+        document.getElementById('users-modal').classList.remove('open');
+    }
+
+    async function loadUsers() {
+        const list = document.getElementById('users-list');
+        if (!list) return;
+        list.textContent = 'Loading...';
+        try {
+            const res = await fetchWithAuth(API + '/admin/getusers');
+            const data = await res.json();
+            if (data.success) {
+                if (!data.users || data.users.length === 0) {
+                    list.textContent = 'No users found.';
+                    return;
+                }
+                list.innerHTML = data.users.map(u => {
+                    const [username, role] = u;
+                    return `<div><strong>${escapeHtml(username)}</strong> — ${escapeHtml(role)}</div>`;
+                }).join('');
+            } else {
+                list.textContent = data.error || 'Failed to load users.';
+            }
+        } catch (e) {
+            list.textContent = 'Could not reach server.';
+        }
+    }
+
     // ── AUTH ──
     function switchTab(tab) {
         activeTab = tab;
@@ -1226,6 +1301,7 @@
                     });
                     const loginData = await loginRes.json();
                     if (loginData.success) {
+                        localStorage.setItem('role', loginData.role || '');
                         loginSuccess(username, loginData.token);
                     } else {
                         msg.className = 'auth-msg error';
@@ -1236,6 +1312,7 @@
                     msg.textContent = 'Could not reach server';
                 }
             } else {
+                localStorage.setItem('role', data.role || '');
                 loginSuccess(username, data.token);
             }
         } catch (e) {
@@ -1253,6 +1330,7 @@
             localStorage.setItem('token', token);
             localStorage.setItem('username', username);
         }
+        updateAdminUI(localStorage.getItem('role'));
         document.getElementById('header-user').textContent = username.toUpperCase();
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app-screen').style.display = 'block';
@@ -1264,10 +1342,12 @@
         allParts = [];
         localStorage.removeItem('token');
         localStorage.removeItem('username');
+        localStorage.removeItem('role');
         document.getElementById('auth-screen').style.display = 'flex';
         document.getElementById('app-screen').style.display = 'none';
         document.getElementById('auth-password').value = '';
         document.getElementById('auth-msg').textContent = '';
+        updateAdminUI(null);
     }
 
     document.addEventListener('keydown', e => {
@@ -1281,8 +1361,10 @@
         const token = localStorage.getItem('token');
         const username = localStorage.getItem('username');
         const theme = localStorage.getItem('theme') || 'default';
+        const role = localStorage.getItem('role');
         setTheme(theme);
         if (token && username) {
+            updateAdminUI(role);
             loginSuccess(username, null); // null so we don't overwrite the existing token
         }
     });

@@ -60,9 +60,9 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-def create_token(username: str):
+def create_token(username: str, role: str):
     expire = datetime.utcnow() + timedelta(days=7)
-    return jwt.encode({"sub": username, "exp": expire}, SECRET_KEY, algorithm="HS256")
+    return jwt.encode({"sub": username, "role": role, "exp": expire}, SECRET_KEY, algorithm="HS256")
 
 def verify_request(request: Request):
     auth = request.headers.get("Authorization","")
@@ -77,6 +77,21 @@ def verify_request(request: Request):
     if not username:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     return username
+
+def get_role(request: Request):
+    auth = request.headers.get("Authorization","")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    token = auth.split(" ",1)[1].strip()
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    role = payload.get("role")
+    if not role:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    return role
+
 @app.get("/")
 def root():
     return {"status": "ok"}
@@ -91,7 +106,7 @@ async def register(request: Request, body: AuthRequest):
 async def login(request: Request, body: AuthRequest):
     result = auth.authenticate_user(body.username, body.password)
     if result.get("success"):
-        result["token"] = create_token(body.username)
+        result["token"] = create_token(body.username, result["role"])
     return result
 
 @app.get("/inventory/getall")
@@ -113,3 +128,9 @@ def edit_part(request: EditPartRequest, username: str = Depends(verify_request))
 @app.delete("/inventory/delete")
 def delete_part(id: int, username: str = Depends(verify_request)):
     return inv.delete_part(id)
+
+@app.get("/admin/getusers")
+def get_users(username: str = Depends(verify_request), role: str = Depends(get_role)):
+    if role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+    return auth.get_users()

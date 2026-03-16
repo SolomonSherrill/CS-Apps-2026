@@ -32,12 +32,18 @@ class user_auth:
             return {"success": False, "error": "Password must contain at least one digit."}
         if not any(c in special_characters for c in password):
             return {"success": False, "error": "Password must contain at least one special character."}
-        if invite_code != os.getenv("INVITE_CODE"):
+        if invite_code == os.getenv("BASIC_CODE"):
+            role = "basic"
+        elif invite_code == os.getenv("ADMIN_CODE"):
+            role = "admin"
+        elif invite_code is None:
+            return {"success": False, "error": "Invite code is required."}
+        else:            
             return {"success": False, "error": "Invalid invite code."}
         hashed_password = self.hash_password(password)
         try:
             self.connect()
-            self.cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
+            self.cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", (username, hashed_password, role))
             self.conn.commit()
             return {"success": True}
         except psycopg2.errors.UniqueViolation:
@@ -62,13 +68,14 @@ class user_auth:
                     pass
                 return {"success": False, "error": "Invalid username or password"}
             hashed_password = userData[2]
+            role = userData[3]
             try:
                 ph.verify(hashed_password, password)
                 if ph.check_needs_rehash(hashed_password):
                     new_hash = ph.hash(password)
                     self.cur.execute("UPDATE users SET password = %s WHERE username = %s", (new_hash, username))
                     self.conn.commit()
-                return {"success": True} 
+                return {"success":  True, "role": role} 
             except (VerifyMismatchError, VerificationError, InvalidHashError):
                 return {"success": False, "error": "Invalid username or password"}
         except Exception as e:
@@ -79,3 +86,17 @@ class user_auth:
                     self.conn.close()
             except Exception:
                 pass
+    def get_users(self):
+        try:            
+            self.connect()
+            self.cur.execute("SELECT username, role FROM users")
+            rows = self.cur.fetchall()
+            return {"success": True, "users": rows}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass  
