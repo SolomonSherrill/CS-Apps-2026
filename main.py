@@ -25,6 +25,11 @@ class AuthRequest(BaseModel):
     password: str
     invite_code: Optional[str] = None
 
+class ChangePasswordRequest(BaseModel):
+    username: str
+    old_password: str
+    new_password: str
+
 class AddPartRequest(BaseModel):
     name: str
     category: str
@@ -96,18 +101,25 @@ def get_role(request: Request):
 def root():
     return {"status": "ok"}
 
-@app.post("/register")
+@app.post("/auth/register")
 @limiter.limit("1000/hour")
 async def register(request: Request, body: AuthRequest):
     return auth.create_user(body.username, body.password, body.invite_code)
 
-@app.post("/login")
+@app.post("/auth/login")
 @limiter.limit("1000/hour")
 async def login(request: Request, body: AuthRequest):
     result = auth.authenticate_user(body.username, body.password)
     if result.get("success"):
         result["token"] = create_token(body.username, result["role"])
     return result
+
+@app.post("/auth/change_password")
+@limiter.limit("1000/hour")
+def change_password(request: Request, body: ChangePasswordRequest, username: str = Depends(verify_request)):
+    if username != body.username:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+    return auth.change_password(body.username, body.old_password, body.new_password)
 
 @app.get("/inventory/getall")
 def get_inventory(username: str = Depends(verify_request)):

@@ -17,6 +17,42 @@ class user_auth:
     def hash_password(self, password):
         ph = PasswordHasher()
         return ph.hash(password)
+    def change_password(self, username, old_password, new_password):
+        lowercase_letters = "abcdefghijklmnopqrstuvwxyz"
+        uppercase_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        digits = "0123456789"
+        special_characters = "!@#$%^&*()-_=+[]{}|;:,.<>?/"
+        if len(new_password) < 10:
+            return {"success": False, "error": "Password must be at least 10 characters long."}
+        if not any(c in lowercase_letters for c in new_password):
+            return {"success": False, "error": "Password must contain at least one lowercase letter."}
+        if not any(c in uppercase_letters for c in new_password):
+            return {"success": False, "error": "Password must contain at least one uppercase letter."}
+        if not any(c in digits for c in new_password):
+            return {"success": False, "error": "Password must contain at least one digit."}
+        if not any(c in special_characters for c in new_password):
+            return {"success": False, "error": "Password must contain at least one special character."}
+        self.connect()
+        try:
+            self.cur.execute("SELECT password FROM users WHERE username = %s", (username,))
+            row = self.cur.fetchone()
+            if not row:
+                return {"success": False, "error": "User not found."}
+            passHash = row[0]
+            ph = PasswordHasher()
+            ph.verify(passHash, old_password)
+            newHash = ph.hash(new_password)
+            self.cur.execute("UPDATE users SET password = %s WHERE username = %s", (newHash, username))
+            self.conn.commit()
+            return {"success": True}
+        except (VerifyMismatchError, VerificationError, InvalidHashError):
+            return {"success": False, "error": "Old password is incorrect."}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass
     def create_user(self, username, password, invite_code=None):
         lowercase_letters = "abcdefghijklmnopqrstuvwxyz"
         uppercase_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
