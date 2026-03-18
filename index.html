@@ -338,6 +338,54 @@
             color: var(--accent);
         }
 
+        .user-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .user-row:last-child { border-bottom: none; }
+
+        .user-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .lock-badge {
+            display: inline-block;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        .unlock-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .unlock-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
         .theme-switch {
             display: flex;
             gap: 6px;
@@ -1384,15 +1432,42 @@
                     list.textContent = 'No users found.';
                     return;
                 }
+                const now = new Date();
                 list.innerHTML = data.users.map(u => {
-                    const [username, role] = u;
-                    return `<div><strong>${escapeHtml(username)}</strong> — ${escapeHtml(role)}</div>`;
+                    const [username, role, failed_attempts, last_failed_attempt, locked_until] = u;
+                    const locked = locked_until && new Date(locked_until) > now;
+                    const lockedText = locked
+                        ? `Locked until ${new Date(locked_until).toLocaleString()}`
+                        : 'Not locked';
+                    return `<div class="user-row">
+                        <div class="user-meta">
+                            <div><strong>${escapeHtml(username)}</strong></div>
+                            <div class="user-role">${escapeHtml(role)} · ${escapeHtml(lockedText)}</div>
+                            ${locked ? '<span class="lock-badge">LOCKED</span>' : ''}
+                        </div>
+                        ${locked ? `<button class="unlock-btn" onclick="unlockUser('${escapeJsString(username)}')">REMOVE TIMEOUT</button>` : ''}
+                    </div>`;
                 }).join('');
             } else {
                 list.textContent = data.error || 'Failed to load users.';
             }
         } catch (e) {
             list.textContent = 'Could not reach server.';
+        }
+    }
+
+    async function unlockUser(username) {
+        try {
+            const res = await fetchWithAuth(API + '/admin/unlock_user', {
+                method: 'POST',
+                body: JSON.stringify({ username })
+            });
+            const data = await res.json();
+            if (data.success) {
+                loadUsers();
+            }
+        } catch (e) {
+            console.error('Failed to unlock user', e);
         }
     }
 

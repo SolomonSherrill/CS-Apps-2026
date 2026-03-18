@@ -25,6 +25,9 @@ class AuthRequest(BaseModel):
     password: str
     invite_code: Optional[str] = None
 
+class UnlockRequest(BaseModel):
+    username: str
+
 class ChangePasswordRequest(BaseModel):
     username: str
     old_password: str
@@ -146,3 +149,9 @@ def get_users(username: str = Depends(verify_request), role: str = Depends(get_r
     if role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
     return auth.get_users()
+
+@app.post("/admin/unlock_user")
+def unlock_user(request: UnlockRequest, username: str = Depends(verify_request), role: str = Depends(get_role)):
+    if role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+    return auth.unlock_user(request.username)
