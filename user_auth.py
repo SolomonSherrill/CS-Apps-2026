@@ -1,10 +1,14 @@
 import psycopg2
 import os
+#used for timing out users from failed login attempts
 from datetime import datetime, timedelta
+#used to retrieve database url and invite codes from .env file
 from dotenv import load_dotenv
+#used for password hashing and verification
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
 class user_auth:
+    #initializes connection to database and creates cursor for executing queries, also loads environment variables from .env file
     def __init__(self):
         load_dotenv()
         db_url = os.getenv("SUPABASE_URL")
@@ -12,12 +16,12 @@ class user_auth:
             raise ValueError("SUPABASE_URL not found in environment variables.")
         self.conn = psycopg2.connect(db_url)
         self.cur = self.conn.cursor() 
+    #connect method to be used within other methods to ensure a fresh connection to the database
     def connect(self):
         self.conn = psycopg2.connect(os.getenv("SUPABASE_URL"))
         self.cur = self.conn.cursor()
-    def hash_password(self, password):
-        ph = PasswordHasher()
-        return ph.hash(password)
+    
+    #method to change a user's password, requires the old password for verification and checks the new password against complexity requirements
     def change_password(self, username, old_password, new_password):
         lowercase_letters = "abcdefghijklmnopqrstuvwxyz"
         uppercase_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -54,6 +58,8 @@ class user_auth:
                     self.conn.close()
             except Exception:
                 pass
+    
+    #method to create a new user, checks password against complexity requirements and requires a valid invite code for either basic or admin role, which gives specific permissions within the website
     def create_user(self, username, password, invite_code=None):
         lowercase_letters = "abcdefghijklmnopqrstuvwxyz"
         uppercase_letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -77,7 +83,8 @@ class user_auth:
             return {"success": False, "error": "Invite code is required."}
         else:            
             return {"success": False, "error": "Invalid invite code."}
-        hashed_password = self.hash_password(password)
+        ph = PasswordHasher()
+        hashed_password = ph.hash(password)
         try:
             self.connect()
             self.cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", (username, hashed_password, role))
@@ -92,6 +99,11 @@ class user_auth:
                     self.conn.close()
             except Exception:
                 pass
+
+    #method to authenticate a user during login, checks the provided password against the stored hash and implements account lockout after 3 failed attempts within an hour
+    #checks if the account is currently locked before attempting verification and resets failed attempts after a successful login or if the last failed attempt was over an hour ago, returns the user's role if authentication is successful for use in access control on admin-only endpoints
+    #if the username is not found, performs a fake verification to mitigate timing attacks and returns a generic error message to avoid revealing whether the username or password was incorrect
+    #if the password is correct but needs rehashing due to updated hashing parameters, automatically rehashes the password and updates the stored hash in the database
     def authenticate_user(self, username, password) -> bool:
         try:
             self.connect()
@@ -128,7 +140,7 @@ class user_auth:
                 locked_until = datetime.utcnow() + timedelta(hours=1) if failed_attempts >= 3 else None
                 self.cur.execute("UPDATE users SET failed_attempts = %s, last_failed_attempt = %s, locked_until = %s WHERE username = %s", (failed_attempts, datetime.utcnow(), locked_until, username))
                 self.conn.commit()
-                return {"success": False, "error": "Invalid username or password"}
+                return {"success": False, "error": "Invalid username or password"} if failed_attempts < 3 else {"success": False, "error": "Account locked until " + str(locked_until) + " due to multiple failed attempts"}
         except Exception as e:
             return {"success": False, "error": str(e)}
         finally:
@@ -137,6 +149,8 @@ class user_auth:
                     self.conn.close()
             except Exception:
                 pass
+
+    #admin method to retrieve a list of all users, their roles, and lockout status, requires admin role to access
     def get_users(self):
         try:            
             self.connect()
@@ -150,7 +164,9 @@ class user_auth:
                 if self.conn:
                     self.conn.close()
             except Exception:
-                pass  
+                pass 
+
+    #admin method to unlock a user's account by resetting failed attempts and lockout status, requires admin role to access
     def unlock_user(self, username):
         try:
             self.connect()
