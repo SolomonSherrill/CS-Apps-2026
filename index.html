@@ -975,10 +975,10 @@
                 <button class="theme-btn" data-theme="ember" onclick="setTheme('ember')">Ember</button>
                 <button class="theme-btn" data-theme="neon" onclick="setTheme('neon')">Neon</button>
             </div>
-            <button class="btn-admin" id="btn-admin-users" style="display:none" onclick="openUsersModal()">USERS</button>
             <div class="user-menu" id="user-menu">
                 <button class="user-btn" id="header-user" onclick="toggleUserMenu(event)"></button>
                 <div class="user-dropdown" id="user-dropdown">
+                    <button id="menu-admin-users" style="display:none" onclick="openUsersModal()">Users</button>
                     <button onclick="openChangePasswordModal()">Change Password</button>
                     <button onclick="logout()">Log Out</button>
                 </div>
@@ -1374,9 +1374,10 @@
     }
 
     function updateAdminUI(role) {
-        const btn = document.getElementById('btn-admin-users');
-        if (!btn) return;
-        btn.style.display = role === 'admin' ? 'inline-block' : 'none';
+        const menuItem = document.getElementById('menu-admin-users');
+        if (menuItem) {
+            menuItem.style.display = role === 'admin' ? 'block' : 'none';
+        }
     }
 
     function openUsersModal() {
