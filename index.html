@@ -386,6 +386,23 @@
             color: var(--accent);
         }
 
+        .delete-btn {
+            background: none;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
         .theme-switch {
             display: flex;
             gap: 6px;
@@ -1439,13 +1456,17 @@
                     const lockedText = locked
                         ? `Locked until ${new Date(locked_until).toLocaleString()}`
                         : 'Not locked';
+                    const safeUsername = escapeJsString(username);
                     return `<div class="user-row">
                         <div class="user-meta">
                             <div><strong>${escapeHtml(username)}</strong></div>
                             <div class="user-role">${escapeHtml(role)} · ${escapeHtml(lockedText)}</div>
                             ${locked ? '<span class="lock-badge">LOCKED</span>' : ''}
                         </div>
-                        ${locked ? `<button class="unlock-btn" onclick="unlockUser('${escapeJsString(username)}')">REMOVE TIMEOUT</button>` : ''}
+                        <div style="display:flex;gap:6px;align-items:center">
+                            ${locked ? `<button class="unlock-btn" onclick="unlockUser('${safeUsername}')">REMOVE TIMEOUT</button>` : ''}
+                            <button class="delete-btn" onclick="deleteUser('${safeUsername}')">DELETE</button>
+                        </div>
                     </div>`;
                 }).join('');
             } else {
@@ -1468,6 +1489,24 @@
             }
         } catch (e) {
             console.error('Failed to unlock user', e);
+        }
+    }
+
+    async function deleteUser(username) {
+        if (!confirm(`Delete user ${username}?`)) return;
+        try {
+            const res = await fetchWithAuth(API + '/admin/delete_user', {
+                method: 'POST',
+                body: JSON.stringify({ username })
+            });
+            const data = await res.json();
+            if (data.success) {
+                loadUsers();
+            } else {
+                alert(data.error || 'Failed to delete user.');
+            }
+        } catch (e) {
+            console.error('Failed to delete user', e);
         }
     }
 

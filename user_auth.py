@@ -183,3 +183,23 @@ class user_auth:
                     self.conn.close()
             except Exception:
                 pass
+    
+    #admin method to delete a user from the database, requires admin role to access
+    def delete_user(self, target_username,sender_username):
+        if target_username == sender_username:
+            return {"success": False, "error": "Users cannot delete their own account."}
+        try:
+            self.connect()
+            self.cur.execute("DELETE FROM users WHERE username = %s", (target_username,))
+            self.conn.commit()
+            if self.cur.rowcount == 0:
+                return {"success": False, "error": "User not found."}
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+        finally:
+            try:
+                if self.conn:
+                    self.conn.close()
+            except Exception:
+                pass

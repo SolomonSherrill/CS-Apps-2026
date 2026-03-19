@@ -39,6 +39,10 @@ class AuthRequest(BaseModel):
 class UnlockRequest(BaseModel):
     username: str
 
+#request to delete a user from the system, requires the username of the account to be deleted, admin role required to access this endpoint
+class DeleteUserRequest(BaseModel):
+    username: str
+
 #request to change a user's password, requires the username, old password for verification, and new password, user must be authenticated and can only change their own password
 class ChangePasswordRequest(BaseModel):
     username: str
@@ -188,3 +192,10 @@ def unlock_user(request: UnlockRequest, username: str = Depends(verify_request),
     if role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
     return auth.unlock_user(request.username)
+
+#api endpoint to delete a user from the system, requires admin role to access
+@app.post("/admin/delete_user")
+def delete_user(request: DeleteUserRequest, username: str = Depends(verify_request), role: str = Depends(get_role)):
+    if role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+    return auth.delete_user(request.username, username)
